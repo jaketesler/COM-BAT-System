@@ -4,7 +4,7 @@ SparkFun Electronics
 Joel Bartlett
 December 20, 2012 
 
-Modified by Jake Tesler
+Modified by Jake Tesler for the COM-BAT System Project
 
 This code uses the information presented in the SerLCD Datasheet 
 to create an Arduino example using the SerLCD from SparkFun Electonics. 
