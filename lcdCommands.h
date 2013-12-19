@@ -4,6 +4,8 @@ SparkFun Electronics
 Joel Bartlett
 December 20, 2012 
 
+Modified by Jake Tesler
+
 This code uses the information presented in the SerLCD Datasheet 
 to create an Arduino example using the SerLCD from SparkFun Electonics. 
 Each of the SerLCD's capabilities is broken up into seperate functions
@@ -39,7 +41,7 @@ If we meet some day, and you think this stuff is worth it, you can buy me a beer
 ************************************************************************/
 
 
-SoftwareSerial myLCD(5,4); //5 RX, 4 TX*
+SoftwareSerial myLCD(5,4); //5 RX, 4 TX* ##CUSTOM
 //-------------------------------------------------------------------------------------------
 
 //-------------------------------------------------------------------------------------------
@@ -64,6 +66,7 @@ void LCDselectLineOne()
   myLCD.write(128); //position
 }
 //-------------------------------------------------------------------------------------------
+//NEW CUSTOM PROGRAM/UTILITY
 void LCDsetPosition(int line, int pos) //set position at line, position (1-4,1-20);
 { 
   if (line > 4 || line < 1) {line=1;} //if lines outside max reset to 0
@@ -299,7 +302,8 @@ void LCDcursors()
   delay(1000);
   LCDclearScreen();
 }
-
+//-------------------------------------------------------------------------------------------
+//NEW CUSTOM PROGRAM/UTILITY
 void LCDclearScreenFull()
 {
   LCDsetPosition(1,1);
