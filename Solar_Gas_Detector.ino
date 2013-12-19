@@ -3,20 +3,20 @@
 
 // ***** Coded by Jake Tesler ***** //
 
-/* ************************************************************************
- *   ********* READ THESE INSTRUCTIONS! *********
+/* *************************************************************************
+ *    ********* READ THESE INSTRUCTIONS! *********
  *  MOSFET (power control) must be wired to all components except the LCD screen and the Arduino
  *  MOSFET Low = power ON, MOSFET High = power OFF
- 
+ *	
  *  TODO: Before this is uploaded to an arduino, all the EEPROM values need to be set to zero...
  *  EEPROM values are a follows: 1 indicates LOW or 1.4v; 2 indicates HIGH or 5v
  *  EEPROM(1) is the current mode.
- 
- MQ-7 Citizen Sensor uses a G5V1 Relay
- 
+ *
+ *  MQ-7 Citizen Sensor uses a G5V1 Relay
+ *
  *  NOTE: When RELAY pin is HIGH, connect to 5v. When the pin is LOW, connect to 1.4v. 
  *
- * ************************************************************************
+ * *************************************************************************
  */
 
 #include "Arduino.h"
@@ -35,10 +35,10 @@
 
 volatile signed int mode = -1; //initial mode
 int prevMode = 2; //mode == 0 initially (really) and this will 
-                  //confirm the check for mode accuracy...[0-1-2] cycle
+                  //##confirm the check for mode accuracy...[0-1-2] cycle
 volatile signed int initSet = 0; //initial settings for each mode bit
-//double battLevel = 100; //set high initially for no specific reason
-//replaced with local var below
+//double battLevel = 100; //set high initially for no specific reason;
+//##replaced with local var below
 volatile signed int warningShown = 0;
 
 
@@ -52,13 +52,13 @@ unsigned long MQinterval = 90000; //interval at which to switch relay(ms) [dynam
 int MQrelayState = LOW;
 
 int airInfoSwitch = 0; //air pollution info (LCD line 4) switch var
-int airInfoSwitchMultiplier = 6; //1.5sec
+static int airInfoSwitchMultiplier = 6; //1.5sec
 
 int romAddr; //random # (not 0 or 1 [reserved])...will be set during setup
 //SoftwareSerial myLCD(5,4); //5 RX, 4 TX //redefined in lcdCommands.h
 
 signed int animStep = -17; //tracker for confusedAnimation()
-signed int initAnimStep = -17;
+static signed int initAnimStep = -17;
 
 Adafruit_BMP085 bar; //I2C - initialize barometric sensor using library
 MAX1704 fuelGauge; //I2C - initialize fuel gauge
@@ -86,7 +86,7 @@ void setup()
   analogWrite(BUTTONLED, ledLuxLevel); //turn on LED initially
   digitalWrite(13, HIGH);
   digitalWrite(RELAY, LOW); //start at collection (1.4v)
-  digitalWrite(5, HIGH); //start SDA/SCL relay, leave on permanently
+  digitalWrite(5, HIGH); //start SDA/SCL batt monitor relay, leave on permanently
   
   myLCD.begin(9600); //initializes LCD at 9600 baud
   Serial.begin(9600); //necessary?
@@ -122,18 +122,19 @@ void setup()
   //valid addresses range from 2-255 (0/1 reserved)
   //romZero will store the address used by the previous power cycle, romAddr will store the current address
   //These two variables will remain like this forever...romZero must store the previous address for this to function
-  int romZero = EEPROM.read(0); //remember that romZero will store the PREVIOUSLY used address
+  int romZeroAddr = 1  //changed from zero to extend longevity
+  int romZero = EEPROM.read(romZeroAddr); //remember that romZero will store the PREVIOUSLY used address
   if (romZero >= 255 || romZero < 2) //if address in 0 is >= 255 (max EEPROM byte value) or less than 2 (our min byte value)
   {
     romAddr = 2; //set EEPROM address to 2 (0/1 resered)
     EEPROM.write(romAddr, 1); //Write to new address value of 1 (relay LOW)...best to start safe
-    EEPROM.write(0, 2); //reset address 0 to value 2 (which is now the current address)
+    EEPROM.write(romZeroAddr, 2); //reset address 0 (or zeroaddr) to value 2 (which is now the current address)
   }
   else //if previous address is less than 255 (normal EEPROM value)
   {
     romAddr = romZero+1; //set EEPROM current address to (one + previous address)
     EEPROM.write(romAddr, EEPROM.read(romZero)); //set romAddr to value of previous address
-    EEPROM.write(0, romAddr); //increase stored address in (address 0) by one (set to current address)
+    EEPROM.write(romZeroAddr, romAddr); //increase stored address in (address 0) by one (set to current address)
     Serial.println();
     Serial.println("romstore complete");
   }
@@ -234,12 +235,13 @@ void setup()
   digitalWrite(MOSFET, LOW);
   
   //mode = EEPROM.read(1); //#### DO NOT!!! ##RE-ENABLE THIS FOR FINAL PRODUCT VERSION //The mode should reset, not pick up from where left off. 
+                           //Not worth it to have a permenant mode stored, just start from scratch on reboot.
   
-  warningShown = 0; //initialize warning system
+  warningShown = 0;  //initialize warning system
   //attachInterrupt(0, interrupt0, LOW); //digital pin 2 //should be last in setup
-  buzz(9,400,200);
+  buzz(9,400,200);  //buzz on pin 9 at 400hz for 200ms
   delay(250);
-  buzz(9,400,200);
+  buzz(9,400,200);  //buzz on pin 9 at 400hz for 200ms
   attachInterrupt(0, interrupt0, FALLING); //digital pin 2 //should be last in setup
   //attachInterrupt(0, interrupt0, CHANGE); //digital pin 2
 }
@@ -247,6 +249,7 @@ void setup()
 
 void loop() {
 
+//##DEBUG
   Serial.print("MODE ");
   Serial.println(mode);
   //Serial.println(fuelGauge.stateOfCharge());
@@ -256,13 +259,11 @@ void loop() {
   
 //if (mode > 2) { mode=0; EEPROM.write(1,0); } //if mode is outside # of modes (currently 3 modes)
 
-  //set title bar...mode titles cannot be longer than 14char
-
   if (mode == -1)
   {
-    buzz(9,400,200);
+    buzz(9,400,200);  //buzz on pin 9 at 400hz for 200ms
     delay(200);
-//    buzz(9,400,200);
+//  buzz(9,400,200);  //buzz on pin 9 at 400hz for 200ms
     mode = 0;
   }
   
@@ -271,7 +272,9 @@ void loop() {
       digitalWrite(MOSFET, LOW); //turn on to power components
       //Serial.println("mosfet low");
     }
-  
+
+  //set title bar...mode titles cannot be longer than 14char
+
   //GLOBAL BATTERY STAT
   
   double battLevel = fuelGauge.stateOfCharge();
@@ -282,7 +285,7 @@ void loop() {
     LCDsetPosition(1,15);
     myLCD.print("B"); //batt logo;
     LCDsetPosition(1,16); //16
-    myLCD.print(battLevel,1); //,1
+    myLCD.print(battLevel,1); //[,1]=.1 (include decimal)
     LCDsetPosition(1,20);
     myLCD.print("%");
   }
@@ -303,24 +306,19 @@ void loop() {
     LCDsetPosition(1,15);
     myLCD.print("PWE_LW");
   }
-
-
-  if (mode == 1) //gas sensors1
+  else
   {
-    mode1();
+    LCDsetPosition(1,15);
+    myLCD.print("B_SNSR");
   }
-  if (mode == 0); //off-recharge0
+
+  if (mode == 1) { mode1(); } //gas sensors1
+  if (mode == 0); //off-recharge0 //##I think the semicolon was a typo, but the device works great with it, so leave it in.
   { 
     mode0();
   }
-  if (mode == 2) //atmospheric mode2
-  {
-    mode2();
-  }
-  if (mode == 3) //initial science warning
-  {
-    mode3();
-  }
+  if (mode == 2) { mode2(); } //atmospheric mode2
+  if (mode == 3) { mode3(); } //initial science warning
 
   //THIS IS NOW A GLOBAL CHECK
   //MQ7 (CO) relay switcher
@@ -347,8 +345,7 @@ void loop() {
   }
 
   delay(500); //delay until next global event  
-}
-
+} //END void loop()
 
 
 
@@ -391,7 +388,7 @@ void mode0() //off-recharge
       
       if((millis()/1000) > 15) //alive for more than 10 sec
       {
-        buzz(9,400,200);
+        buzz(9,400,200);  //buzz on pin 9 at 400hz for 200ms
       }
      
   }
@@ -533,13 +530,13 @@ void mode1() //AIR SENSOR
       analogWrite(BUTTONLED, 0);
       delay(200);
       analogWrite(BUTTONLED, ledLuxLevel);
-      buzz(9,400,200);
+      buzz(9,400,200);  //buzz on pin 9 at 400hz for 200ms
       //delay(250);
       analogWrite(BUTTONLED, 0);
       delay(200);
       interrupts();
       analogWrite(BUTTONLED, ledLuxLevel);
-      buzz(9,400,200);
+      buzz(9,400,200);  //buzz on pin 9 at 400hz for 200ms
 
       //      LCDsetPosition(4,1);
       //      myLCD.print("  20-2k || 200-10k  "); //MQ7 (CO) || MQ4 (CH4);
@@ -561,12 +558,9 @@ void mode1() //AIR SENSOR
       LCDsetPosition(3,11);
       myLCD.print("ppm"); 
     }
-    //cycle air sensor information
     
-    if (airInfoSwitch == (airInfoSwitchMultiplier*3))
-    { 
-      airInfoSwitch = 0; 
-    }
+    //cycle air sensor information
+    if (airInfoSwitch == (airInfoSwitchMultiplier*3)) { airInfoSwitch = 0; }
     if (airInfoSwitch < (airInfoSwitchMultiplier*3) && airInfoSwitch >= (airInfoSwitchMultiplier*2))
     {
       LCDsetPosition(4,1);
@@ -606,7 +600,6 @@ void mode1() //AIR SENSOR
       myLCD.print(" 1.4v");
       LCDsetPosition(3,17);
       myLCD.print("    ");
-      
     }
     else
     {
@@ -619,7 +612,7 @@ void mode1() //AIR SENSOR
       LCDsetPosition(3,17);
       myLCD.print("HOLD");
     }
-
+    
     /*
     LCD should read like this:
      12345678901234567890
@@ -665,18 +658,18 @@ void mode2() //ATMOSPHERIC
       analogWrite(BUTTONLED, 0);
       delay(200);
       analogWrite(BUTTONLED, ledLuxLevel);
-      buzz(9,400,200);
+      buzz(9,400,200);  //buzz on pin 9 at 400hz for 200ms
       //delay(250);
       analogWrite(BUTTONLED, 0);
       delay(200);
       analogWrite(BUTTONLED, ledLuxLevel);
-      buzz(9,400,200);
+      buzz(9,400,200);  //buzz on pin 9 at 400hz for 200ms
       //delay(250);
       analogWrite(BUTTONLED, 0);
       delay(200);
       interrupts();
       analogWrite(BUTTONLED, ledLuxLevel);
-      buzz(9,400,200);
+      buzz(9,400,200);  //buzz on pin 9 at 400hz for 200ms
       
       
       LCDclearScreen();
@@ -718,11 +711,8 @@ void mode2() //ATMOSPHERIC
     myLCD.write(0b11011111);
     myLCD.print("F");
   }
-  else
-  {
-    myLCD.print("Temp Error");
-  }
-  
+  else { myLCD.print("Temp Error"); }
+
   
   if(MQrelayState == LOW) //1.4v
   {
@@ -740,13 +730,11 @@ void mode2() //ATMOSPHERIC
   LCDsetPosition(3,11);
   if (curBarPres < 115000)
   {
-  myLCD.print(curBarPres, 0);
-  myLCD.print(" Pa ");
+    myLCD.print(curBarPres, 0);
+    myLCD.print(" Pa ");
   }
-  else
-  {
-    myLCD.print(">1k kPa [E");
-  }
+  else { myLCD.print(">1k kPa [E"); }
+
 
   // Calculate altitude assuming 'standard' barometric
   // pressure of 1013.25 millibar = 101325 Pascal
@@ -758,10 +746,8 @@ void mode2() //ATMOSPHERIC
     myLCD.print((curBarAlt), 1);
     myLCD.print(" Ft."); //(" Feet ");
   }
-  else
-  {
-    myLCD.print(">10k Feet");
-  }
+  else { myLCD.print(">10k Feet"); }
+  
   
   //Serial.println(curBarTemp);
   //Serial.println(curBarAlt);
@@ -834,21 +820,17 @@ unsigned long interrupt_time = millis();
 void interrupt0()
 {
   //debounce protection
-
   
   interrupt_time = millis();
   // If interrupts come faster than 200ms, assume it's a bounce and ignore
   if (interrupt_time - last_interrupt_time > 200) 
   {
-  
-  noInterrupts();
-  if(mode != -1)
-  {
-    buzz(9,500,200);
-  }
-  digitalWrite(13, LOW);
-  //digitalWrite(BUTTONLED, LOW);
-  analogWrite(BUTTONLED, ledLuxLevel);
+    noInterrupts();
+    if(mode != -1) { buzz(9,500,200); } //buzz on pin 9 at 500hz for 200ms
+    
+    digitalWrite(13, LOW);
+    //digitalWrite(BUTTONLED, LOW);
+    analogWrite(BUTTONLED, ledLuxLevel);
   
   if (warningShown == 0) //if just pressed for very first time
   {
@@ -902,16 +884,16 @@ void interrupt0()
 
 void buzz(int targetPin, long frequency, long length) {
   long delayValue = 1000000/frequency/2; // calculate the delay value between transitions
-  //// 1 second's worth of microseconds, divided by the frequency, then split in half since
-  //// there are two phases to each cycle
+  //## 1 second's worth of microseconds, divided by the frequency, then split in half since
+  //## there are two phases to each cycle
   long numCycles = frequency * length/ 1000; // calculate the number of cycles for proper timing
-  //// multiply frequency, which is really cycles per second, by the number of seconds to 
-  //// get the total number of cycles to produce
-  for (long i=0; i < numCycles; i++){ // for the calculated length of time...
-    digitalWrite(targetPin,HIGH); // write the buzzer pin high to push out the diaphram
+  //## multiply frequency, which is really cycles per second, by the number of seconds to 
+  //## get the total number of cycles to produce
+  for (long i=0; i < numCycles; i++) { // for the calculated length of time...
+    digitalWrite(targetPin, HIGH); // write the buzzer pin high to push out the diaphram
     delayMicroseconds(delayValue); // wait for the calculated delay value
-    digitalWrite(targetPin,LOW); // write the buzzer pin low to pull back the diaphram
-    delayMicroseconds(delayValue); // wait againf or the calculated delay value
+    digitalWrite(targetPin, LOW); // write the buzzer pin low to pull back the diaphram
+    delayMicroseconds(delayValue); // wait again or the calculated delay value
   }
 }
 
@@ -925,7 +907,8 @@ void confusedAnimation(int curStep)
   {
     LCDsetPosition(3,1);
     myLCD.write(0x4F);
-    myLCD.write(0xA3);     myLCD.print("o ");
+    myLCD.write(0xA3);     
+    myLCD.print("o ");
   }
   else if (curStep == -16)
   {
@@ -933,7 +916,8 @@ void confusedAnimation(int curStep)
     myLCD.print("Introducing");
     LCDsetPosition(3,1);
     myLCD.write(0x4F);
-    myLCD.write(0xA3);     myLCD.print("o ");
+    myLCD.write(0xA3);     
+    myLCD.print("o ");
   }
   else if (curStep == -15)
   {
@@ -941,7 +925,8 @@ void confusedAnimation(int curStep)
     myLCD.print("Introducing.");
     LCDsetPosition(3,1);
     myLCD.write(0x4F);
-    myLCD.write(0xA3);     myLCD.print("o ");
+    myLCD.write(0xA3);     
+    myLCD.print("o ");
   }
   else if (curStep == -14)
   {
@@ -1606,7 +1591,7 @@ void confusedAnimation(int curStep)
 
 
 
-/* SWITCH HOLD CODE?????
+/* SWITCH HOLD [DEBOUNCE?] CODE?????
  int varSWITCH_PIN = 0;  //variable to store switch presses
  
  if (digitalRead(SWITCH_PIN) == LOW)
