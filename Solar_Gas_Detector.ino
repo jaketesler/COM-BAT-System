@@ -122,7 +122,7 @@ void setup()
   //valid addresses range from 2-255 (0/1 reserved)
   //romZero will store the address used by the previous power cycle, romAddr will store the current address
   //These two variables will remain like this forever...romZero must store the previous address for this to function
-  int romZeroAddr = 1  //changed from zero to extend longevity
+  int romZeroAddr = 1;  //changed from zero to extend longevity
   int romZero = EEPROM.read(romZeroAddr); //remember that romZero will store the PREVIOUSLY used address
   if (romZero >= 255 || romZero < 2) //if address in 0 is >= 255 (max EEPROM byte value) or less than 2 (our min byte value)
   {
