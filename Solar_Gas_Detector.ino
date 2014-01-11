@@ -280,11 +280,20 @@ void loop() {
   double battLevel = fuelGauge.stateOfCharge();
   //Serial.print("global ");
   //Serial.println(battLevel);
-  if (battLevel < 100 && battLevel > -0.01)
+  if (battLevel < 100 && battLevel >= 10)
   {
     LCDsetPosition(1,15);
     myLCD.print("B"); //batt logo;
     LCDsetPosition(1,16); //16
+    myLCD.print(battLevel,1); //[,1]=.1 (include decimal)
+    LCDsetPosition(1,20);
+    myLCD.print("%");
+  }
+  else if (battLevel < 10 && battLevel > -0.01)
+  {
+    LCDsetPosition(1,15);
+    myLCD.print("B0"); //batt logo;
+    LCDsetPosition(1,17); //16+1 for B"zero"
     myLCD.print(battLevel,1); //[,1]=.1 (include decimal)
     LCDsetPosition(1,20);
     myLCD.print("%");
