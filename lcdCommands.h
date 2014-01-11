@@ -69,7 +69,7 @@ void LCDselectLineOne()
 //NEW CUSTOM PROGRAM/UTILITY
 void LCDsetPosition(int line, int pos) //set position at line, position (1-4,1-20);
 { 
-  if (line > 4 || line < 1) {line=1;} //if lines outside max reset to 0
+ 
     
   /*while (pos > 20) //if pos is greater than 20 (max), subtract 1 lines worth of chars and carriage return
   {
@@ -87,19 +87,11 @@ void LCDsetPosition(int line, int pos) //set position at line, position (1-4,1-2
   
   
   //modify based on lines
-//  if (line == 1) //normal index
-  if (line == 2)
-  {
-    pos += 64;
-  }
-  else if (line == 3)
-  {
-    pos += 20; 
-  }
-  else if (line == 4)
-  {
-    pos += 84;
-  }
+  if (line > 4 || line < 1) {line=1;} //if lines outside max reset to 0
+//else if (line == 1) //normal index
+  else if (line == 2) {pos += 64;}
+  else if (line == 3) {pos += 20;}
+  else if (line == 4) {pos += 84;}
   
   pos += 128;
   myLCD.write(0xFE); //command flag
